@@ -25,8 +25,11 @@ public class Server {
                 String clientMessage = in.readLine();
                 System.out.println("Messaggio ricevuto: " + clientMessage);
 
-                // Rispondi al client
-                out.println("Messaggio ricevuto: " + clientMessage);
+                // Trasforma il messaggio in maiuscolo
+                String upperCaseMessage = clientMessage.toUpperCase();
+
+                // Rispondi al client con il messaggio trasformato
+                out.println("Messaggio trasformato: " + upperCaseMessage);
 
                 // Chiudi la connessione con il client
                 clientSocket.close();
