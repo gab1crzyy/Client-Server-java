@@ -26,11 +26,21 @@ public class Client {
             // Messaggio da inviare al server
             String message = nome;
             writer.println(message);
+            System.out.println("Inviato al server: " + message);
             String message2 = (port + serverAddress);
             writer.println(message2);
+            System.out.println("Inviato al server: " + message2);
+            Scanner scanner2 = new Scanner(System.in);
+            String messageFine = scanner2.nextLine();
+            writer.println(messageFine);
+            System.out.println("Inviato al server: " + messageFine);
+            
+            String message3 = "il client puo continuare";
+            writer.println(message3);
+            System.out.println("Inviato al server: " + message3);
             
           
-            System.out.println("Inviato al server: " + message);
+           
 
             // Ricezione della risposta dal server
             String response = reader.readLine();
