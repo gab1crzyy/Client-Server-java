@@ -3,8 +3,8 @@ import java.net.*;
 public class Client {
 
 	public static void main(String[] args) {
-		String serverAddress = "10.130.1.127"; // Indirizzo IP del server
-        int port = 31128;                  // Porta del server
+		String serverAddress = "127.0.0.1"; // Indirizzo IP del server
+        int port = 12345;                  // Porta del server
 
         try (Socket socket = new Socket(serverAddress, port)) {
             System.out.println("Connessione al server " + serverAddress + " sulla porta " + port);
