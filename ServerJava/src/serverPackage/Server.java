@@ -2,111 +2,102 @@ package serverPackage;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Server {
     public static void main(String[] args) {
-        int port = 12345; // Porta su cui il server ascolta
-        List<Socket> clientSockets = new ArrayList<>();
-        AtomicBoolean running = new AtomicBoolean(true); // Usa AtomicBoolean per la variabile condivisa
+        int port = 12345;  // Porta su cui il server ascolta
+        boolean running = true;
+        BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in)); // Dichiarato all'esterno
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
+            serverSocket.setReuseAddress(true);  // Forza il riutilizzo della porta
             System.out.println("Server avviato e in ascolto sulla porta " + port);
 
-            // Thread separato per leggere i comandi dalla console
-            Thread consoleThread = new Thread(() -> {
-                try (BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in))) {
-                    while (running.get()) { // Usa running.get() per controllare il valore
-                        String command = consoleReader.readLine();
-                        if ("exit".equalsIgnoreCase(command)) {
-                            System.out.println("Chiusura del server in corso...");
-                            running.set(false); // Imposta running a false
+            while (running) {
+                System.out.println("In attesa di una connessione...");
+                try (Socket clientSocket = serverSocket.accept()) {
+                    // Informazioni del client
+                    String clientAddress = clientSocket.getInetAddress().getHostAddress();
+                    int clientPort = clientSocket.getPort();
 
-                            // Invia messaggio di chiusura ai client
-                            synchronized (clientSockets) {
-                                for (Socket client : clientSockets) {
-                                    try (PrintWriter out = new PrintWriter(client.getOutputStream(), true)) {
-                                        out.println("Server in chiusura. Connessione terminata.");
-                                    } catch (IOException e) {
-                                        System.err.println("Errore durante l'invio del messaggio di chiusura: " + e.getMessage());
-                                    }
-                                }
-                            }
-//lalala
-                            // Chiudi il ServerSocket per interrompere il metodo accept()
-                            try {
-                                serverSocket.close();
-                            } catch (IOException e) {
-                                System.err.println("Errore durante la chiusura del ServerSocket: " + e.getMessage());
-                            }
-                            break;
-                        }
-                    }
-                } catch (IOException e) {
-                    System.err.println("Errore nella lettura dei comandi dalla console: " + e.getMessage());
-                }
-            });
-            consoleThread.start();
+                    // Chiedi se accettare la connessione
+                    System.out.println("Connessione richiesta da [IP: " + clientAddress + ", Port: " + clientPort + "]");
+                    System.out.print("Accettare la connessione (s/n)? ");
+                    
+                    // Leggi la risposta dalla console
+                    String response = consoleReader.readLine();
 
-            // Ciclo principale del server per gestire le connessioni dei client
-            while (running.get()) { // Usa running.get() per verificare se il server è in esecuzione
-                try {
-                    System.out.println("In attesa di una connessione...");
-                    Socket clientSocket = serverSocket.accept();
-
-                    // Aggiungi il client alla lista
-                    synchronized (clientSockets) {
-                        clientSockets.add(clientSocket);
-                    }
-
-                    System.out.println("Connessione accettata da " + clientSocket.getInetAddress());
-
-                    // Gestione della comunicazione con il client in un thread separato
-                    new Thread(() -> {
+                    if ("s".equalsIgnoreCase(response)) {
+                        System.out.println("Connessione accettata da [IP: " + clientAddress + ", Port: " + clientPort + "]");
+                        
+                        // Comunica con il client
                         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                              PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
-                            String clientMessage;
-                            while ((clientMessage = in.readLine()) != null) {
-                                System.out.println("Messaggio ricevuto: " + clientMessage);
+                            boolean clientConnected = true;
 
-                                // Trasforma il messaggio in maiuscolo e invialo al client
-                                String upperCaseMessage = clientMessage.toUpperCase();
-                                out.println("Messaggio trasformato: " + upperCaseMessage);
+                            while (clientConnected) {
+                                // Leggi messaggi dal client
+                                if (in.ready()) {
+                                    String clientMessage = in.readLine();
+                                    if (clientMessage == null) {
+                                        System.out.println("Il client si è disconnesso.");
+                                        clientConnected = false;
+                                        continue;
+                                    }
+
+                                    System.out.println("Messaggio ricevuto da [IP: " + clientAddress + ", Port: " + clientPort + "]: " + clientMessage);
+
+                                    if ("stop".equalsIgnoreCase(clientMessage)) {
+                                        System.out.println("Il client ha inviato il comando 'stop'. Interruzione della connessione.");
+                                        clientConnected = false;
+                                        break;
+                                    } else if ("exit".equalsIgnoreCase(clientMessage)) {
+                                        System.out.println("Il client ha inviato il comando 'exit'. La connessione verrà chiusa, ma il server rimarrà attivo.");
+                                        break;
+                                    } else {
+                                        // Trasforma il messaggio in maiuscolo e invialo al client
+                                        String upperCaseMessage = clientMessage.toUpperCase();
+                                        out.println("Messaggio trasformato: " + upperCaseMessage);
+                                    }
+                                }
                             }
                         } catch (IOException e) {
                             System.err.println("Errore nella comunicazione con il client: " + e.getMessage());
-                        } finally {
-                            // Rimuovi il client dalla lista quando si disconnette
-                            synchronized (clientSockets) {
-                                clientSockets.remove(clientSocket);
-                            }
-                            try {
-                                clientSocket.close();
-                            } catch (IOException e) {
-                                System.err.println("Errore nella chiusura della connessione con il client: " + e.getMessage());
-                            }
-                            System.out.println("Connessione chiusa con il client.");
                         }
-                    }).start();
-                } catch (IOException e) {
-                    if (running.get()) { // Se il server non è in chiusura, stampa l'errore
-                        System.err.println("Errore durante l'accettazione di una connessione: " + e.getMessage());
+
+                        // Messaggio finale con i dati del client
+                        System.out.println("Connessione terminata con il client [IP: " + clientAddress + ", Port: " + clientPort + "]");
                     } else {
-                        System.out.println("Server in chiusura, accettazione connessioni interrotta.");
+                        System.out.println("Connessione rifiutata da [IP: " + clientAddress + ", Port: " + clientPort + "]");
                     }
+                } catch (IOException e) {
+                    System.err.println("Errore durante l'accettazione di una connessione: " + e.getMessage());
+                }
+
+                // Verifica se l'utente ha scritto 'exit' nella console
+                try {
+                    if (consoleReader.ready()) {
+                        String command = consoleReader.readLine();
+                        if (command.equalsIgnoreCase("exit")) {
+                            System.out.println("Chiusura del server in corso...");
+                            running = false;
+                            // Attendi un po' prima di chiudere la connessione
+                            try {
+                                Thread.sleep(2000);  // Ritardo di 2 secondi per dare tempo al sistema di rilasciare la porta
+                            } catch (InterruptedException e) {
+                                System.err.println("Errore durante l'attesa: " + e.getMessage());
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("Errore durante la lettura della console: " + e.getMessage());
                 }
             }
-            //banan.java
-
-            // Chiudi il server dopo il comando "exit"
-            consoleThread.join();
-            System.out.println("Server chiuso.");
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             System.err.println("Errore nel server: " + e.getMessage());
-            e.printStackTrace();
         }
+
+        System.out.println("Server chiuso.");
     }
 }
