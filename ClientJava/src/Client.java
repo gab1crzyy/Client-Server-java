@@ -26,11 +26,17 @@ public class Client {
             // Messaggio da inviare al server
             String message = nome;
             writer.println(message);
+            String message2 = (port + serverAddress);
+            writer.println(message2);
+            
+          
             System.out.println("Inviato al server: " + message);
 
             // Ricezione della risposta dal server
             String response = reader.readLine();
             System.out.println("Risposta dal server: " + response);
+           
+         
            
 
         } catch (UnknownHostException ex) {
