@@ -34,7 +34,7 @@ public class Server {
                                     }
                                 }
                             }
-
+//lalala
                             // Chiudi il ServerSocket per interrompere il metodo accept()
                             try {
                                 serverSocket.close();
