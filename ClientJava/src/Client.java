@@ -31,6 +31,7 @@ public class Client {
             // Ricezione della risposta dal server
             String response = reader.readLine();
             System.out.println("Risposta dal server: " + response);
+           
 
         } catch (UnknownHostException ex) {
             System.err.println("Host sconosciuto: " + ex.getMessage());
